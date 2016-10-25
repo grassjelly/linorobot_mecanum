@@ -1,0 +1,17 @@
+<launch>
+  <include file="$(find linorobot_mecanum)/launch/laser.launch" />
+
+  <arg name="map_file" default="$(find linorobot_mecanum)/maps/house.yaml"/>
+  <node pkg="map_server" name="map_server"  type="map_server" args="$(arg map_file)" />
+
+  <include file="$(find linorobot_mecanum)/launch/amcl.launch" />
+
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <rosparam file="$(find linorobot_mecanum)/param/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find linorobot_mecanum)/param/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find linorobot_mecanum)/param/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find linorobot_mecanum)/param/global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find linorobot_mecanum)/param/base_local_planner_params.yaml" command="load" />
+    <rosparam file="$(find linorobot_mecanum)/param/move_base_params.yaml" command="load" />
+  </node>
+</launch>

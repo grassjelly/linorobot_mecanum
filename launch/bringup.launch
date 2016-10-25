@@ -1,0 +1,23 @@
+<launch>
+  <!--serial communication between arduino and pc via usb /-->
+  <node name="arduino_serial_node" pkg="rosserial_python" type="serial_node.py" output="screen">
+    <param name="port" value="/dev/ttyACM0" />
+    <param name="baud" value="57600" />
+  </node>
+
+
+ <node pkg="ros_arduino_imu" type="raw_imu_bridge_node" name="raw_imu_bridge" output="screen" respawn="false">
+   <rosparam>
+     imu/accelerometer_bias: {x: -0.131470156, y: -0.295752343, z: -0.5997614070000008}
+     imu/gyroscope_bias: {x: -0.008431381556216777, y: 0.02036080765564346, z: 0.007239818370848954}
+     imu/perform_calibration: false
+   </rosparam>
+ </node>
+
+
+  <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_madgwick" output="screen" respawn="false" >
+    <param name="fixed_frame" value="odom" />
+  </node>
+
+  <node name="lino_base_node" pkg="linorobot_mecanum" type="lino_base_node_mecanum"></node>
+</launch>
