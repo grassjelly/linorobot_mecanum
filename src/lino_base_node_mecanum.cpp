@@ -144,7 +144,7 @@ int main(int argc, char** argv){
     odom.child_frame_id = "base_link";
     //linear speed from encoders
     odom.twist.twist.linear.x = linear_velocity_x;
-    odom.twist.twist.linear.y = 0.0;
+    odom.twist.twist.linear.y = linear_velocity_y;
     odom.twist.twist.linear.z = 0.0;
 
     odom.twist.twist.angular.x = 0.0;
