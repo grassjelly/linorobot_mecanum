@@ -178,37 +178,37 @@ void loop()
     //calculate the tangential velocity of the wheel if the robot's rotating where Vt = ω * radius
     double tangential_vel = angular_vel_mins * (TRACK_WIDTH / 2);
 
-    double vx = linear_vel_x_mins / circumference;
-    double tvx = tangential_vel / circumference;
-    double vy = linear_vel_y_mins / circumference;
+    double x_rpm = linear_vel_x_mins / circumference;
+    double y_rpm = linear_vel_y_mins / circumference;
+    double tan_rpm = tangential_vel / circumference;
 
     //calculate and assign desired RPM for each motor
     if(required_linear_vel_y == 0)
     {
       //left side
-      motor1.required_rpm = vx - tvx;
-      motor3.required_rpm = vx - tvx;
+      motor1.required_rpm = x_rpm - tan_rpm;
+      motor3.required_rpm = motor1.required_rpm;
       //right side
-      motor2.required_rpm = vx + tvx;
-      motor4.required_rpm = vx + tvx;
+      motor2.required_rpm = x_rpm + tan_rpm;
+      motor4.required_rpm = motor2.required_rpm;
     }
     else if (required_linear_vel_x == 0)
     {
       //left side
-      motor1.required_rpm = -vy;
-      motor3.required_rpm =  vy;
+      motor1.required_rpm = -y_rpm;
+      motor3.required_rpm =  y_rpm;
       //right side
-      motor2.required_rpm =  vy;
-      motor4.required_rpm = -vy;
+      motor2.required_rpm =  motor3.required_rpm;
+      motor4.required_rpm = -motor1.required_rpm;
     }
     else
     {
       //left_side
-      motor1.required_rpm =  vx - vy;
-      motor3.required_rpm =  vx + vy;
+      motor1.required_rpm =  x_rpm - y_rpm;
+      motor3.required_rpm =  x_rpm + y_rpm;
       //right side
-      motor2.required_rpm =  vx + vy;
-      motor4.required_rpm =  vx - vy ;
+      motor2.required_rpm =  motor3.required_rpm;
+      motor4.required_rpm =  motor1.required_rpm ;
     }
   }
 
