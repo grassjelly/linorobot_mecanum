@@ -112,7 +112,7 @@ char buffer[50];
 //function prototypes
 void check_imu();
 void publish_imu();
-void publish_linear_velocity(unsigned long);
+void publish_linear_velocity();
 void move_base();
 void stop_base();
 
