@@ -199,7 +199,7 @@ void loop()
       motor3.required_rpm =  y_rpm;
       //right side
       motor2.required_rpm =  motor3.required_rpm;
-      motor4.required_rpm = -motor1.required_rpm;
+      motor4.required_rpm = motor1.required_rpm;
     }
     else
     {
