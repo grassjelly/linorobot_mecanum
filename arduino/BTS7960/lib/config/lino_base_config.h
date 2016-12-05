@@ -4,8 +4,8 @@
 #define DEBUG 0
 
 const float K_P = 0.05; // P constant
-const float K_I = 0.7;  // I constant
-const float K_D = 0.01; // D constant
+const float K_I = 0.9;  // I constant
+const float K_D = 0.1; // D constant
 
 // define your motors' specs here
 
