@@ -272,10 +272,9 @@ void move_base()
 
 void stop_base()
 {
-  motor1.stop();
-  motor3.stop();
-  motor2.stop();
-  motor4.stop();
+  required_linear_vel_x = 0;
+  required_linear_vel_y = 0;
+  required_angular_vel = 0;
 }
 
 void publish_linear_velocity()
