@@ -4,8 +4,8 @@
 uint8_t mag_reads = 0;
 byte mag_buffer[6];
 
-bool check_magnetometer();
-void measure_magnetometer();
+bool checkMagnetometer();
+void measureMagnetometer();
 geometry_msgs::Vector3 raw_magnetic_field;
 
 #if defined(HMC5883L)
@@ -13,4 +13,3 @@ geometry_msgs::Vector3 raw_magnetic_field;
 #endif
 
 #endif  // _MAGNETOMETER_H_
-

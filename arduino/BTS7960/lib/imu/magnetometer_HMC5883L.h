@@ -11,7 +11,7 @@
 #define HMC5883L_MAG_GAIN 0x20  //Default gain
 #define HMC5883L_MAG_SCALE 0.92  // mG/LSb
 
-bool check_magnetometer()
+bool checkMagnetometer()
 {
   write_to_register(HMC5883L_MAG_ADDRESS,HMC5883L_MAG_REG_B,HMC5883L_MAG_GAIN);  //Sets the gain
   delay(5);
@@ -22,7 +22,7 @@ bool check_magnetometer()
   return true;;
 }
 
-void measure_magnetometer()
+void measureMagnetometer()
 {
   mag_reads = 0;
   send_value(HMC5883L_MAG_ADDRESS,HMC5883L_MAG_DATAX0);
@@ -32,7 +32,7 @@ void measure_magnetometer()
     mag_buffer[mag_reads] = Wire.read();
     mag_reads++;
   }
-  raw_magnetic_field.x =  (float)(MAG_X_INVERT * ((int16_t)((int)mag_buffer[2*MAG_X_AXIS] << 8) | (mag_buffer[2*MAG_X_AXIS+1]))) * HMC5883L_MAG_SCALE; 
+  raw_magnetic_field.x =  (float)(MAG_X_INVERT * ((int16_t)((int)mag_buffer[2*MAG_X_AXIS] << 8) | (mag_buffer[2*MAG_X_AXIS+1]))) * HMC5883L_MAG_SCALE;
   raw_magnetic_field.y =  (float)(MAG_Y_INVERT * ((int16_t)((int)mag_buffer[2*MAG_Y_AXIS] << 8) | (mag_buffer[2*MAG_Y_AXIS+1]))) * HMC5883L_MAG_SCALE;
   raw_magnetic_field.z =  (float)(MAG_Z_INVERT * ((int16_t)((int)mag_buffer[2*MAG_Z_AXIS] << 8) | (mag_buffer[2*MAG_Z_AXIS+1]))) * HMC5883L_MAG_SCALE;
   write_to_register(HMC5883L_MAG_ADDRESS,HMC5883L_MAG_MODE,0x01);
@@ -40,4 +40,3 @@ void measure_magnetometer()
 }
 
 #endif  // _MAGNETOMETER_HMC5883L_H_
-

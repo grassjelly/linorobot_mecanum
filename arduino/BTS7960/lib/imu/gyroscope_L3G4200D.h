@@ -11,7 +11,7 @@
 #define L3G4200D_CTRL_REG5 0x24
 #define L3G4200D_SCALE 939.275077264 //rad/s
 
-bool check_gyroscope()
+bool checkGyroscope()
 {
   if (check_ID(L3G4200D_GYRO_ADDRESS,L3G4200D_WHO_AM_I) == L3G4200D_WHO_AM_I_VALUE)
   {
@@ -27,7 +27,7 @@ bool check_gyroscope()
     return false;
 }
 
-void measure_gyroscope()
+void measureGyroscope()
 {
   gyro_reads = 0;
   send_value(L3G4200D_GYRO_ADDRESS,0x80 | 0x28);

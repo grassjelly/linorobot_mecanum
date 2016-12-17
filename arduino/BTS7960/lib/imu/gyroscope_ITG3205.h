@@ -9,7 +9,7 @@
 #define ITG3205_DLPF_FS 0x16
 #define ITG3205_SCALE 0.00121414209  //rad/s
 
-bool check_gyroscope()
+bool checkGyroscope()
 {
   if ((check_ID(ITG3205_GYRO_ADDRESS,ITG3205_WHO_AM_I) & 0x7E) == ITG3205_GYRO_ADDRESS)
   {
@@ -27,7 +27,7 @@ bool check_gyroscope()
     return false;
 }
 
-void measure_gyroscope()
+void measureGyroscope()
 {
   gyro_reads = 0;;
   send_value(ITG3205_GYRO_ADDRESS,0x1D);

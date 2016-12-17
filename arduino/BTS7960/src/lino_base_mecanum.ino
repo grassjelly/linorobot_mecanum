@@ -56,6 +56,8 @@
 #include "lino_base_config.h"
 #include "Encoder.h"
 #include "Motor.h"
+#include "Kinematics.h"
+#include "PID.h"
 
 #define ENCODER_OPTIMIZE_INTERRUPTS
 
@@ -64,13 +66,16 @@
 #define COMMAND_RATE 10 //hz
 #define DEBUG_RATE 5
 
-// left side motors
+//left side motors
 Motor motor1(MOTOR1_IN_A, MOTOR1_IN_B); // front
 Motor motor3(MOTOR3_IN_A, MOTOR3_IN_B); // rear
 
 // right side motors
 Motor motor2(MOTOR2_IN_A, MOTOR2_IN_B); // front
 Motor motor4(MOTOR4_IN_A, MOTOR4_IN_B); // frear
+
+//COUNTS_PER_REV = 0 if no encoder
+int Motor::counts_per_rev_ = COUNTS_PER_REV;
 
 //left side encoders
 Encoder motor1_encoder(MOTOR1_ENCODER_A,MOTOR1_ENCODER_B); //front
@@ -80,36 +85,35 @@ Encoder motor3_encoder(MOTOR3_ENCODER_A,MOTOR3_ENCODER_B); //rear
 Encoder motor2_encoder(MOTOR2_ENCODER_A,MOTOR2_ENCODER_B); //front
 Encoder motor4_encoder(MOTOR4_ENCODER_A,MOTOR4_ENCODER_B); //rear
 
-float Motor::Kp = K_P;
-float Motor::Kd = K_D;
-float Motor::Ki = K_I;
+Kinematics mecanum_kinematics(MAX_RPM, WHEEL_DIAMETER, BASE_WIDTH, PWM_BITS);
 
-int Motor::max_rpm = MAX_RPM;
-int Motor::counts_per_rev = COUNTS_PER_REV;
-float Motor::wheel_diameter = WHEEL_DIAMETER;
+PID motor1_pid(-255, 255, K_P, K_I, K_D);
+PID motor2_pid(-255, 255, K_P, K_I, K_D);
+PID motor3_pid(-255, 255, K_P, K_I, K_D);
+PID motor4_pid(-255, 255, K_P, K_I, K_D);
 
-double required_angular_vel = 0;
-double required_linear_vel_x = 0;
-double required_linear_vel_y = 0;
+double g_req_angular_vel_z = 0;
+double g_req_linear_vel_x = 0;
+double g_req_linear_vel_y = 0;
 
-unsigned long previous_command_time = 0;
-unsigned long previous_control_time = 0;
-unsigned long publish_vel_time = 0;
-unsigned long previous_imu_time = 0;
-unsigned long previous_debug_time = 0;
+unsigned long g_prev_command_time = 0;
+unsigned long g_prev_control_time = 0;
+unsigned long g_publish_vel_time = 0;
+unsigned long g_prev_imu_time = 0;
+unsigned long g_prev_debug_time = 0;
 
-bool is_first = true;
+bool g_is_first = true;
 
-char buffer[50];
+char g_buffer[50];
 
 //callback function prototypes
-void command_callback( const geometry_msgs::Twist& cmd_msg);
-void pid_callback( const lino_pid::linoPID& pid);
+void commandCallback( const geometry_msgs::Twist& cmd_msg);
+void PIDcallback( const lino_pid::linoPID& pid);
 
 ros::NodeHandle nh;
 
-ros::Subscriber<geometry_msgs::Twist> cmd_sub("cmd_vel", command_callback);
-ros::Subscriber<lino_pid::linoPID> pid_sub("pid", pid_callback);
+ros::Subscriber<geometry_msgs::Twist> cmd_sub("cmd_vel", commandCallback);
+ros::Subscriber<lino_pid::linoPID> pid_sub("pid", PIDcallback);
 
 ros_arduino_msgs::RawImu raw_imu_msg;
 ros::Publisher raw_imu_pub("raw_imu", &raw_imu_msg);
@@ -119,7 +123,6 @@ ros::Publisher raw_vel_pub("raw_vel", &raw_vel_msg);
 
 void setup()
 {
-  //   initialize_motors();
   nh.initNode();
   nh.getHardware()->setBaud(57600);
   nh.subscribe(pid_sub);
@@ -140,177 +143,123 @@ void setup()
 void loop()
 {
   //this block drives the robot based on defined rate
-  if ((millis() - previous_control_time) >= (1000 / COMMAND_RATE))
+  if ((millis() - g_prev_control_time) >= (1000 / COMMAND_RATE))
   {
-    do_kinematics();
-    move_base();
-    previous_control_time = millis();
+    moveBase();
+    g_prev_control_time = millis();
   }
 
   //this block stops the motor when no command is received
-  if ((millis() - previous_command_time) >= 400)
+  if ((millis() - g_prev_command_time) >= 400)
   {
-    stop_base();
+    stopBase();
   }
 
   //this block publishes velocity based on defined rate
-  if ((millis() - publish_vel_time) >= (1000 / VEL_PUBLISH_RATE))
+  if ((millis() - g_publish_vel_time) >= (1000 / VEL_PUBLISH_RATE))
   {
-    publish_linear_velocity();
-    publish_vel_time = millis();
+    publishLinearVelocity();
+    g_publish_vel_time = millis();
   }
 
   //this block publishes the IMU data based on defined rate
-  if ((millis() - previous_imu_time) >= (1000 / IMU_PUBLISH_RATE))
+  if ((millis() - g_prev_imu_time) >= (1000 / IMU_PUBLISH_RATE))
   {
     //sanity check if the IMU exits
-    if (is_first)
+    if (g_is_first)
     {
-      check_imu();
+      checkIMU();
     }
     else
     {
       //publish the IMU data
-      publish_imu();
+      publishIMU();
     }
-    previous_imu_time = millis();
+    g_prev_imu_time = millis();
   }
 
   //this block displays the encoder readings. change DEBUG to 0 if you don't want to display
   if(DEBUG)
   {
-    if ((millis() - previous_debug_time) >= (1000 / DEBUG_RATE))
+    if ((millis() - g_prev_debug_time) >= (1000 / DEBUG_RATE))
     {
-      print_debug();
-      previous_debug_time = millis();
+      printDebug();
+      g_prev_debug_time = millis();
     }
   }
   //call all the callbacks waiting to be called
   nh.spinOnce();
 }
 
-void pid_callback( const lino_pid::linoPID& pid)
+void PIDcallback( const lino_pid::linoPID& pid)
 {
   //callback function every time PID constants are received from lino_pid for tuning
   //this callback receives pid object where P,I, and D constants are stored
-  Motor::Kp = pid.p;
-  Motor::Kd = pid.d;
-  Motor::Ki = pid.i;
+  motor1_pid.updateConstants(pid.p, pid.i, pid.d);
+  motor2_pid.updateConstants(pid.p, pid.i, pid.d);
+  motor3_pid.updateConstants(pid.p, pid.i, pid.d);
+  motor4_pid.updateConstants(pid.p, pid.i, pid.d);
 }
 
-void command_callback( const geometry_msgs::Twist& cmd_msg)
+void commandCallback( const geometry_msgs::Twist& cmd_msg)
 {
   //callback function every time linear and angular speed is received from 'cmd_vel' topic
   //this callback function receives cmd_msg object where linear and angular speed are stored
-  required_linear_vel_x = cmd_msg.linear.x;
-  required_linear_vel_y = cmd_msg.linear.y;
-  required_angular_vel = cmd_msg.angular.z;
+  g_req_linear_vel_x = cmd_msg.linear.x;
+  g_req_linear_vel_y = cmd_msg.linear.y;
+  g_req_angular_vel_z = cmd_msg.angular.z;
 
-  previous_command_time = millis();
+  g_prev_command_time = millis();
 }
 
-void do_kinematics()
+void moveBase()
 {
-  //convert m/s to m/min
-  double linear_vel_x_mins = required_linear_vel_x * 60;
-  double linear_vel_y_mins = required_linear_vel_y * 60;
+  Kinematics::output req_rpm;
+  //get the required rpm for each motor based on required velocities
+  req_rpm = mecanum_kinematics.getRPM(g_req_linear_vel_x, g_req_linear_vel_y, g_req_angular_vel_z);
 
-  //convert rad/s to rad/min
-  double angular_vel_mins = required_angular_vel * 60;
-  //calculate the wheel's circumference
-  double circumference = PI * WHEEL_DIAMETER;
-  //calculate the tangential velocity of the wheel if the robot's rotating where Vt = ω * radius
-  double tangential_vel = angular_vel_mins * BASE_WIDTH;
-
-  double x_rpm = linear_vel_x_mins / circumference;
-  double y_rpm = linear_vel_y_mins / circumference;
-  double tan_rpm = tangential_vel / circumference;
-
-  //calculate and assign desired RPM for each motor
-  if(required_linear_vel_y == 0)
-  {
-    //left side
-    motor1.required_rpm = x_rpm - tan_rpm;
-    motor3.required_rpm = motor1.required_rpm;
-    //right side
-    motor2.required_rpm = x_rpm + tan_rpm;
-    motor4.required_rpm = motor2.required_rpm;
-  }
-  else if (required_linear_vel_x == 0)
-  {
-    //left side
-    motor1.required_rpm = -y_rpm;
-    motor3.required_rpm =  y_rpm;
-    //right side
-    motor2.required_rpm = motor3.required_rpm;
-    motor4.required_rpm = motor1.required_rpm;
-  }
-  else
-  {
-    //left_side
-    motor1.required_rpm =  x_rpm - y_rpm;
-    motor3.required_rpm =  x_rpm + y_rpm;
-    //right side
-    motor2.required_rpm =  motor3.required_rpm;
-    motor4.required_rpm =  motor1.required_rpm ;
-  }
+  //the required rpm is capped at -/+ MAX_RPM to prevent the PID from having too much error
+  //the PWM value sent to the motor driver is the calculated PID based on required RPM vs measured RPM
+  motor1.spin(motor1_pid.compute(constrain(req_rpm.motor1, -MAX_RPM, MAX_RPM), motor1.rpm));
+  motor3.spin(motor2_pid.compute(constrain(req_rpm.motor2, -MAX_RPM, MAX_RPM), motor2.rpm));
+  motor2.spin(motor3_pid.compute(constrain(req_rpm.motor3, -MAX_RPM, MAX_RPM), motor3.rpm));
+  motor4.spin(motor4_pid.compute(constrain(req_rpm.motor4, -MAX_RPM, MAX_RPM), motor4.rpm));
 }
 
-void move_base()
+void stopBase()
 {
-  //calculate each motor's rpm for pwm calculation and odometry
-  motor1.calculate_rpm(motor1_encoder.read());
-  motor3.calculate_rpm(motor3_encoder.read());
-  motor2.calculate_rpm(motor2_encoder.read());
-  motor4.calculate_rpm(motor4_encoder.read());
-
-  motor1.spin(motor1.calculate_pwm());
-  motor3.spin(motor3.calculate_pwm());
-  motor2.spin(motor2.calculate_pwm());
-  motor4.spin(motor4.calculate_pwm());
+  g_req_linear_vel_x = 0;
+  g_req_linear_vel_y = 0;
+  g_req_angular_vel_z = 0;
 }
 
-void stop_base()
+void publishLinearVelocity()
 {
-  required_linear_vel_x = 0;
-  required_linear_vel_y = 0;
-  required_angular_vel = 0;
-}
+  //update the current speed of each motor based on encoder's count
+  motor1.updateSpeed(motor1_encoder.read());
+  motor2.updateSpeed(motor2_encoder.read());
+  motor3.updateSpeed(motor3_encoder.read());
+  motor4.updateSpeed(motor4_encoder.read());
 
-void publish_linear_velocity()
-{
-  // this function publishes the linear speed of the robot
-
-  //calculate the average RPM in x axis
-  double average_rpm_x = (motor1.current_rpm + motor3.current_rpm + motor2.current_rpm + motor4.current_rpm) / 4; // RPM
-  //convert revolutions per minute in x axis to revolutions per second
-  double average_rps_x = average_rpm_x / 60; // RPS
-  //calculate linear speed in y axis
-  double linear_velocity_x = (average_rps_x * (WHEEL_DIAMETER * PI)); // m/s
-
-  //calculate the average RPM in y axis
-  double average_rpm_y = ( (-motor1.current_rpm) + motor3.current_rpm + motor2.current_rpm + (-motor4.current_rpm) ) / 4; // RPM
-  //convert revolutions per minute in y axis to revolutions per second
-  double average_rps_y = average_rpm_y / 60; // RPS
-  //calculate linear speed in y axis
-  double linear_velocity_y = (average_rps_y * (WHEEL_DIAMETER * PI)); // m/s
+  Kinematics::velocities vel;
+  vel = mecanum_kinematics.getVelocities(motor1.rpm, motor2.rpm, motor3.rpm, motor4.rpm);
 
   //fill in the object
   raw_vel_msg.header.stamp = nh.now();
-  raw_vel_msg.vector.x = linear_velocity_x;
-  raw_vel_msg.vector.y = linear_velocity_y;
-  raw_vel_msg.vector.z = 0.00;
+  raw_vel_msg.vector.x = vel.linear_x;
+  raw_vel_msg.vector.y = vel.linear_y;
+  raw_vel_msg.vector.z = vel.angular_z;
 
   //publish raw_vel_msg object to ROS
   raw_vel_pub.publish(&raw_vel_msg);
 }
 
-void check_imu()
+void checkIMU()
 {
   //this function checks if IMU is present
-  raw_imu_msg.accelerometer = check_accelerometer();
-  raw_imu_msg.gyroscope = check_gyroscope();
-  raw_imu_msg.magnetometer = check_magnetometer();
+  raw_imu_msg.accelerometer = checkAccelerometer();
+  raw_imu_msg.gyroscope = checkGyroscope();
+  raw_imu_msg.magnetometer = checkMagnetometer();
 
   if (!raw_imu_msg.accelerometer)
   {
@@ -327,47 +276,51 @@ void check_imu()
     nh.logerror("Magnetometer NOT FOUND!");
   }
 
-  is_first = false;
+  g_is_first = false;
 }
 
-void publish_imu()
+void publishIMU()
 {
-  //this function publishes raw IMU reading
-  raw_imu_msg.header.stamp = nh.now();
-  raw_imu_msg.header.frame_id = "imu_link";
-  //measure accelerometer
-  if (raw_imu_msg.accelerometer)
+  if (raw_imu_msg.accelerometer && raw_imu_msg.gyroscope && raw_imu_msg.magnetometer)
   {
-    measure_acceleration();
-    raw_imu_msg.raw_linear_acceleration = raw_acceleration;
-  }
+    //this function publishes raw IMU reading
+    raw_imu_msg.header.stamp = nh.now();
+    raw_imu_msg.header.frame_id = "imu_link";
 
-  //measure gyroscope
-  if (raw_imu_msg.gyroscope)
-  {
-    measure_gyroscope();
-    raw_imu_msg.raw_angular_velocity = raw_rotation;
-  }
+    //measure accelerometer
+    if (raw_imu_msg.accelerometer)
+    {
+      measureAcceleration();
+      raw_imu_msg.raw_linear_acceleration = raw_acceleration;
+    }
 
-  //measure magnetometer
-  if (raw_imu_msg.magnetometer)
-  {
-    measure_magnetometer();
-    raw_imu_msg.raw_magnetic_field = raw_magnetic_field;
-  }
+    //measure gyroscope
+    if (raw_imu_msg.gyroscope)
+    {
+      measureGyroscope();
+      raw_imu_msg.raw_angular_velocity = raw_rotation;
+    }
 
-  //publish raw_imu_msg object to ROS
-  raw_imu_pub.publish(&raw_imu_msg);
+    //measure magnetometer
+    if (raw_imu_msg.magnetometer)
+    {
+      measureMagnetometer();
+      raw_imu_msg.raw_magnetic_field = raw_magnetic_field;
+    }
+
+    //publish raw_imu_msg object to ROS
+    raw_imu_pub.publish(&raw_imu_msg);
+  }
 }
 
-void print_debug()
+void printDebug()
 {
-  sprintf (buffer, "Encoder FrontLeft: %ld", motor1_encoder.read());
-  nh.loginfo(buffer);
-  sprintf (buffer, "Encoder RearLeft: %ld", motor3_encoder.read());
-  nh.loginfo(buffer);
-  sprintf (buffer, "Encoder FrontRight: %ld", motor2_encoder.read());
-  nh.loginfo(buffer);
-  sprintf (buffer, "Encoder RearRight: %ld", motor4_encoder.read());
-  nh.loginfo(buffer);
+  sprintf (g_buffer, "Encoder FrontLeft: %ld", motor1_encoder.read());
+  nh.loginfo(g_buffer);
+  sprintf (g_buffer, "Encoder RearLeft: %ld", motor3_encoder.read());
+  nh.loginfo(g_buffer);
+  sprintf (g_buffer, "Encoder FrontRight: %ld", motor2_encoder.read());
+  nh.loginfo(g_buffer);
+  sprintf (g_buffer, "Encoder RearRight: %ld", motor4_encoder.read());
+  nh.loginfo(g_buffer);
 }

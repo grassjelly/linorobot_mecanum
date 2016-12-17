@@ -13,7 +13,7 @@
 #define ADXL345_DEVICE_ID 0xE5
 #define ADXL345_SCALE 25.60000
 
-bool check_accelerometer()
+bool checkAccelerometer()
 {
   if (check_ID(ADXL345_ACCELEROMETER_ADDRESS,ADXL345_DEVID) == ADXL345_DEVICE_ID)
   {
@@ -29,7 +29,7 @@ bool check_accelerometer()
     return false;
 }
 
-void measure_acceleration()
+void measureAcceleration()
 {
   acc_reads = 0;
   send_value(ADXL345_ACCELEROMETER_ADDRESS, ADXL345_DATAX0);

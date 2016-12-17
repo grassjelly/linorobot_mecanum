@@ -4,9 +4,9 @@
 uint8_t acc_reads = 0;
 byte acc_buffer[6];
 
-bool check_accelerometer();
+bool checkAccelerometer();
 
-void measure_acceleration();
+void measureAcceleration();
 geometry_msgs::Vector3 raw_acceleration;
 
 #if defined(ADXL345)
@@ -14,4 +14,3 @@ geometry_msgs::Vector3 raw_acceleration;
 #endif
 
 #endif  // _ACCELEROMETER_H_
-

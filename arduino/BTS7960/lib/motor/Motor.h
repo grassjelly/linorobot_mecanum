@@ -6,33 +6,18 @@
 class Motor
 {
     public:
-        double current_rpm;
-        double required_rpm;
+          int rpm;
+          static int counts_per_rev_;
 
-        static float Kp;
-        static float Kd;
-        static float Ki;
-
-        static int max_rpm;
-        static int counts_per_rev;
-        static float wheel_diameter;
-
-        Motor(int motor_pinA, int motor_pinB);
-        void calculate_rpm(long current_encoder_ticks);
-        int calculate_pwm();
-        void spin(int pwm);
-        void stop();
+          Motor(int motor_pinA, int motor_pinB);
+          void updateSpeed(long encoder_ticks);
+          void spin(int pwm);
 
     private:
-        int _pwm_pin;
-        int _motor_pinA;
-        int _motor_pinB;
-
-        double _previous_pid_error;
-        double _total_pid_error;
-        long _previous_encoder_ticks;
-        unsigned long _previous_rpm_time;
-        double _prev_pwm;
+          long prev_encoder_ticks_;
+          unsigned long prev_update_time_;
+          int motor_pinA_;
+          int motor_pinB_;
 };
 
 #endif
