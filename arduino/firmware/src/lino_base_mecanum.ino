@@ -231,16 +231,16 @@ void moveBase()
   //the required rpm is capped at -/+ MAX_RPM to prevent the PID from having too much error
   //the PWM value sent to the motor driver is the calculated PID based on required RPM vs measured RPM
   motor1.spin(motor1_pid.compute(constrain(req_rpm.motor1, -MAX_RPM, MAX_RPM), motor1.rpm));
-  motor3.spin(motor2_pid.compute(constrain(req_rpm.motor3, -MAX_RPM, MAX_RPM), motor3.rpm));
-  motor2.spin(motor3_pid.compute(constrain(req_rpm.motor2, -MAX_RPM, MAX_RPM), motor2.rpm));
+  motor3.spin(motor3_pid.compute(constrain(req_rpm.motor3, -MAX_RPM, MAX_RPM), motor3.rpm));
+  motor2.spin(motor2_pid.compute(constrain(req_rpm.motor2, -MAX_RPM, MAX_RPM), motor2.rpm));
   motor4.spin(motor4_pid.compute(constrain(req_rpm.motor4, -MAX_RPM, MAX_RPM), motor4.rpm));
 }
 
 void stopBase()
 {
-  g_req_linear_vel_x = 0;
-  g_req_linear_vel_y = 0;
-  g_req_angular_vel_z = 0;
+  g_req_linear_vel_x = 0.0;
+  g_req_linear_vel_y = 0.0;
+  g_req_angular_vel_z = 0.0;
 }
 
 void publishLinearVelocity()
@@ -256,7 +256,7 @@ void publishLinearVelocity()
 
   //fill in the object
   raw_vel_msg.linear_x = vel.linear_x;
-  raw_vel_msg.linear_x = vel.linear_y;
+  raw_vel_msg.linear_y = vel.linear_y;
   raw_vel_msg.angular_z = vel.angular_z;
 
   //publish raw_vel_msg object to ROS
