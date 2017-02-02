@@ -60,18 +60,18 @@
 
 #ifdef BTS7960_DRIVER
   // left side motor pins
-  #define MOTOR1_IN_A 22
-  #define MOTOR1_IN_B 23
+  #define MOTOR1_IN_A 21
+  #define MOTOR1_IN_B 20
 
-  #define MOTOR3_IN_A 21
-  #define MOTOR3_IN_B 20
+  #define MOTOR3_IN_A 22
+  #define MOTOR3_IN_B 23
 
   // right side motor pins
-  #define MOTOR2_IN_A 6
-  #define MOTOR2_IN_B 5
+  #define MOTOR2_IN_A 5
+  #define MOTOR2_IN_B 8
 
-  #define MOTOR4_IN_A 3
-  #define MOTOR4_IN_B 4
+  #define MOTOR4_IN_A 4
+  #define MOTOR4_IN_B 2
 #endif
 
 #endif
