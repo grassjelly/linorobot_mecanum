@@ -67,11 +67,11 @@
   #define MOTOR3_IN_B 23
 
   // right side motor pins
-  #define MOTOR2_IN_A 5
-  #define MOTOR2_IN_B 8
+  #define MOTOR2_IN_A 4
+  #define MOTOR2_IN_B 3
 
-  #define MOTOR4_IN_A 4
-  #define MOTOR4_IN_B 2
+  #define MOTOR4_IN_A 5
+  #define MOTOR4_IN_B 6
 #endif
 
 #endif
